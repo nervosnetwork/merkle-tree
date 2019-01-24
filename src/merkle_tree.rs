@@ -1,19 +1,20 @@
 use super::Merge;
 use std::collections::VecDeque;
+use std::marker::PhantomData;
 
 pub struct MerkleTree<T: Merge + Ord + Default + Clone> {
     nodes: Vec<T>,
 }
 
 impl<T: Merge + Ord + Default + Clone> MerkleTree<T> {
-    pub fn build_proof(&self, indices: Vec<usize>) -> Option<MerkleProof<T>> {
+    pub fn build_proof(&self, indices: &[usize]) -> Option<MerkleProof<T>> {
         if self.nodes.is_empty() || indices.is_empty() {
             return None;
         }
 
         let leaves_count = (self.nodes.len() >> 1) + 1;
         let mut indices = indices
-            .into_iter()
+            .iter()
             .map(|i| leaves_count + i - 1)
             .collect::<Vec<_>>();
 
@@ -127,7 +128,7 @@ impl<T: Merge + Ord + Default + Clone> MerkleProof<T> {
 
 #[derive(Default)]
 pub struct CBMT<T: Merge + Ord + Default + Clone> {
-    _t: T,
+    phantom: PhantomData<T>,
 }
 
 pub fn new_cbmt<T: Merge + Ord + Default + Clone>() -> CBMT<T> {
@@ -175,7 +176,7 @@ impl<T: Merge + Ord + Default + Clone> CBMT<T> {
         }
     }
 
-    pub fn build_merkle_proof(&self, leaves: &[T], indices: Vec<usize>) -> Option<MerkleProof<T>> {
+    pub fn build_merkle_proof(&self, leaves: &[T], indices: &[usize]) -> Option<MerkleProof<T>> {
         self.build_merkle_tree(leaves).build_proof(indices)
     }
 }
@@ -317,7 +318,7 @@ mod tests {
             .iter()
             .map(|i| leaves[*i].clone())
             .collect::<Vec<_>>();
-        let proof = cbmt.build_merkle_proof(&leaves, indices).unwrap();
+        let proof = cbmt.build_merkle_proof(&leaves, &indices).unwrap();
         assert_eq!(
             vec![DummyHash(11), DummyHash(3), DummyHash(2)],
             proof.lemmas
@@ -332,7 +333,7 @@ mod tests {
             .map(|i| leaves[*i].clone())
             .collect::<Vec<_>>();
         let cbmt = new_cbmt::<DummyHash>();
-        let proof = cbmt.build_merkle_proof(&leaves, indices).unwrap();
+        let proof = cbmt.build_merkle_proof(&leaves, &indices).unwrap();
         let root = cbmt.build_merkle_root(&leaves);
         assert_eq!(root, proof.root(&proof_leaves).unwrap());
     }
