@@ -28,14 +28,14 @@ impl<T: Merge + Ord + Default + Clone> MerkleTree<T> {
         let mut queue = indices.iter().cloned().map(|i| i).collect::<VecDeque<_>>();
 
         while let Some(index) = queue.pop_front() {
-            let sibling = calc_sibling(index);
+            let sibling = index.sibling();
             if Some(&sibling) == queue.front() {
                 queue.pop_front();
             } else {
                 lemmas.push(self.nodes[sibling].clone());
             }
 
-            let parent = calc_parent(index);
+            let parent = index.parent();
             if parent != 0 {
                 queue.push_back(parent);
             }
@@ -77,7 +77,7 @@ impl<T: Merge + Ord + Default + Clone> MerkleProof<T> {
             .indices
             .iter()
             .zip(leaves.into_iter())
-            .map(|(i, l)| (*i as usize, l))
+            .map(|(i, l)| (*i, l))
             .collect::<Vec<_>>();
         pre.sort_by(|a, b| b.0.cmp(&a.0));
 
@@ -95,16 +95,16 @@ impl<T: Merge + Ord + Default + Clone> MerkleProof<T> {
             }
 
             if let Some(sibling) = match queue.front() {
-                Some((front, _)) if *front == calc_sibling(index) => queue.pop_front().map(|i| i.1),
+                Some((front, _)) if *front == index.sibling() => queue.pop_front().map(|i| i.1),
                 _ => lemmas_iter.next().cloned(),
             } {
-                let parent_node = if is_left(index) {
+                let parent_node = if index.is_left() {
                     T::merge(&node, &sibling)
                 } else {
                     T::merge(&sibling, &node)
                 };
 
-                queue.push_back((calc_parent(index), parent_node));
+                queue.push_back((index.parent(), parent_node));
             }
         }
 
@@ -179,25 +179,40 @@ impl<T: Merge + Ord + Default + Clone> CBMT<T> {
     }
 }
 
-pub fn calc_sibling(num: usize) -> usize {
-    if num == 0 {
-        0
-    } else {
-        ((num + 1) ^ 1) - 1
-    }
+trait TreeIndex {
+    fn sibling(&self) -> Self;
+    fn parent(&self) -> Self;
+    fn is_left(&self) -> bool;
 }
 
-pub fn calc_parent(num: usize) -> usize {
-    if num == 0 {
-        0
-    } else {
-        (num - 1) >> 1
-    }
+macro_rules! impl_tree_index {
+    ($t: ty) => {
+        impl TreeIndex for $t {
+            fn sibling(&self) -> $t {
+                if *self == 0 {
+                    0
+                } else {
+                    ((self + 1) ^ 1) - 1
+                }
+            }
+
+            fn parent(&self) -> $t {
+                if *self == 0 {
+                    0
+                } else {
+                    (self - 1) >> 1
+                }
+            }
+
+            fn is_left(&self) -> bool {
+                self & 1 == 1
+            }
+        }
+    };
 }
 
-pub fn is_left(num: usize) -> bool {
-    num & 1 == 1
-}
+impl_tree_index!(u32);
+impl_tree_index!(usize);
 
 #[cfg(test)]
 mod tests {
