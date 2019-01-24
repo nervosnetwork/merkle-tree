@@ -271,6 +271,7 @@ mod tests {
             .map(|i| leaves[*i].clone())
             .collect::<Vec<_>>();
         let proof = CBMT::build_merkle_proof(&leaves, &indices).unwrap();
+
         assert_eq!(vec![11, 3, 2], proof.lemmas);
         assert_eq!(Some(1), proof.root(&proof_leaves));
     }
@@ -280,6 +281,7 @@ mod tests {
             .iter()
             .map(|i| leaves[*i].clone())
             .collect::<Vec<_>>();
+
         let proof = CBMT::build_merkle_proof(&leaves, &indices).unwrap();
         let root = CBMT::build_merkle_root(&leaves);
         assert_eq!(root, proof.root(&proof_leaves).unwrap());
