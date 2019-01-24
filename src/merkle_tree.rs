@@ -67,6 +67,7 @@ pub struct MerkleProof<T: Merge + Ord + Default + Clone> {
 
 impl<T: Merge + Ord + Default + Clone> MerkleProof<T> {
     pub fn root(&self, leaves: &[T]) -> Option<T> {
+        // TODO: Remove this clone
         let mut leaves = leaves.to_vec();
         if leaves.len() != self.indices.len() || leaves.is_empty() {
             return None;
@@ -160,11 +161,11 @@ impl<T: Merge + Ord + Default + Clone> CBMT<T> {
         queue.pop_front().unwrap()
     }
 
-    pub fn build_merkle_tree(&self, leaves: &[T]) -> MerkleTree<T> {
+    pub fn build_merkle_tree(&self, leaves: Vec<T>) -> MerkleTree<T> {
         let len = leaves.len();
         if len > 0 {
             let mut nodes = vec![T::default(); len - 1];
-            nodes.extend(leaves.to_vec());
+            nodes.extend(leaves);
 
             (0..len - 1)
                 .rev()
@@ -177,7 +178,8 @@ impl<T: Merge + Ord + Default + Clone> CBMT<T> {
     }
 
     pub fn build_merkle_proof(&self, leaves: &[T], indices: &[usize]) -> Option<MerkleProof<T>> {
-        self.build_merkle_tree(leaves).build_proof(indices)
+        // TODO: Remove this clone
+        self.build_merkle_tree(leaves.to_vec()).build_proof(indices)
     }
 }
 
@@ -223,7 +225,7 @@ mod tests {
     fn build_empty() {
         let cbmt = new_cbmt::<DummyHash>();
         let leaves = vec![];
-        let tree = cbmt.build_merkle_tree(&leaves);
+        let tree = cbmt.build_merkle_tree(leaves);
         assert!(tree.nodes().is_empty());
         assert_eq!(tree.root(), DummyHash::default());
     }
@@ -232,7 +234,7 @@ mod tests {
     fn build_one() {
         let leaves = vec![DummyHash(1)];
         let cbmt = new_cbmt::<DummyHash>();
-        let tree = cbmt.build_merkle_tree(&leaves);
+        let tree = cbmt.build_merkle_tree(leaves);
         assert_eq!(&vec![DummyHash(1)], tree.nodes());
     }
 
@@ -240,7 +242,7 @@ mod tests {
     fn build_two() {
         let leaves = vec![DummyHash(1), DummyHash(2)];
         let cbmt = new_cbmt::<DummyHash>();
-        let tree = cbmt.build_merkle_tree(&leaves);
+        let tree = cbmt.build_merkle_tree(leaves);
         assert_eq!(
             &vec![DummyHash(1), DummyHash(1), DummyHash(2)],
             tree.nodes()
@@ -257,7 +259,7 @@ mod tests {
             DummyHash(11),
         ];
         let cbmt = new_cbmt::<DummyHash>();
-        let tree = cbmt.build_merkle_tree(&leaves);
+        let tree = cbmt.build_merkle_tree(leaves);
         assert_eq!(
             &vec![
                 DummyHash(4),
@@ -290,8 +292,8 @@ mod tests {
     fn _build_root_is_same_as_tree_root(leaves: Vec<i32>) {
         let cbmt = new_cbmt::<DummyHash>();
         let leaves = leaves.into_iter().map(|i| DummyHash(i)).collect::<Vec<_>>();
-        let tree = cbmt.build_merkle_tree(&leaves);
         let root = cbmt.build_merkle_root(&leaves);
+        let tree = cbmt.build_merkle_tree(leaves);
         assert_eq!(root, tree.root());
     }
 
