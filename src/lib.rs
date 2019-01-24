@@ -37,4 +37,4 @@ impl Merge for H256 {
     }
 }
 
-pub use crate::merkle_tree::new_cbmt;
+pub use crate::merkle_tree::{new_cbmt, MerkleTree, MerkleProof};
