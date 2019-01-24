@@ -115,6 +115,14 @@ impl<T: Merge + Ord + Default + Clone> MerkleProof<T> {
             _ => false,
         }
     }
+
+    pub fn indices(&self) -> &[u32] {
+        &self.indices
+    }
+
+    pub fn lemmas(&self) -> &[T] {
+        &self.lemmas
+    }
 }
 
 #[derive(Default)]
