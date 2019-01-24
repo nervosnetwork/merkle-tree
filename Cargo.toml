@@ -14,3 +14,8 @@ blake2-rfc = "0.2.18"
 
 [dev-dependencies]
 proptest = "0.8"
+
+[features]
+default = []
+sha3 = []
+blake2b = []

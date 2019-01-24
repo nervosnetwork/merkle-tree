@@ -27,11 +27,13 @@ impl Merge for H256 {
 #[cfg(feature = "blake2b")]
 impl Merge for H256 {
     fn merge(left: &H256, right: &H256) -> H256 {
+        let mut ret = [0u8; 32];
         let mut context = blake2_rfc::blake2b::Blake2b::new(64);
         context.update(left.as_bytes());
         context.update(right.as_bytes());
         let hash = context.finalize();
-        hash.as_bytes().into()
+        ret.copy_from_slice(&hash.as_bytes()[0..32]);
+        ret.into()
     }
 }
 
