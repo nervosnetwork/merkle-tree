@@ -65,7 +65,8 @@ pub struct MerkleProof<T: Merge + Ord + Default + Clone> {
 }
 
 impl<T: Merge + Ord + Default + Clone> MerkleProof<T> {
-    pub fn root(&self, mut leaves: Vec<T>) -> Option<T> {
+    pub fn root(&self, leaves: &[T]) -> Option<T> {
+        let mut leaves = leaves.to_vec();
         if leaves.len() != self.indices.len() || leaves.is_empty() {
             return None;
         }
@@ -108,7 +109,7 @@ impl<T: Merge + Ord + Default + Clone> MerkleProof<T> {
         None
     }
 
-    pub fn verify(&self, root: &T, leaves: Vec<T>) -> bool {
+    pub fn verify(&self, root: &T, leaves: &[T]) -> bool {
         match self.root(leaves) {
             Some(r) => &r == root,
             _ => false,
@@ -313,7 +314,7 @@ mod tests {
             vec![DummyHash(11), DummyHash(3), DummyHash(2)],
             proof.lemmas
         );
-        assert_eq!(Some(DummyHash(1)), proof.root(proof_leaves));
+        assert_eq!(Some(DummyHash(1)), proof.root(&proof_leaves));
     }
 
     fn _tree_root_is_same_as_proof_root(leaves: Vec<i32>, indices: Vec<usize>) {
@@ -325,7 +326,7 @@ mod tests {
         let cbmt = new_cbmt::<DummyHash>();
         let proof = cbmt.build_merkle_proof(&leaves, indices).unwrap();
         let root = cbmt.build_merkle_root(&leaves);
-        assert_eq!(root, proof.root(proof_leaves).unwrap());
+        assert_eq!(root, proof.root(&proof_leaves).unwrap());
     }
 
     proptest! {
