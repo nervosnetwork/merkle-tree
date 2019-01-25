@@ -71,7 +71,7 @@ impl<T: Merge + Ord + Default + Clone> MerkleProof<T> {
         if leaves.len() != self.indices.len() || leaves.is_empty() {
             return None;
         }
-        
+
         // TODO: Remove this clone
         let mut leaves = leaves.to_vec();
         leaves.sort();
@@ -84,7 +84,7 @@ impl<T: Merge + Ord + Default + Clone> MerkleProof<T> {
             .collect::<Vec<_>>();
         pre.sort_by_key(|i| Reverse(i.0));
 
-        let mut queue: VecDeque<(usize, T)> = pre.into();
+        let mut queue: VecDeque<(u32, T)> = pre.into();
         let mut lemmas_iter = self.lemmas.iter();
 
         while let Some((index, node)) = queue.pop_front() {
