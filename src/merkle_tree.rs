@@ -71,7 +71,8 @@ impl<T: Merge + Ord + Default + Clone> MerkleProof<T> {
         if leaves.len() != self.indices.len() || leaves.is_empty() {
             return None;
         }
-
+        
+        // TODO: Remove this clone
         let mut leaves = leaves.to_vec();
         leaves.sort();
 
