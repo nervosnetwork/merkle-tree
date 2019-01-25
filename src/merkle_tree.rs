@@ -1,4 +1,5 @@
 use super::Merge;
+use std::cmp::Reverse;
 use std::collections::VecDeque;
 use std::marker::PhantomData;
 
@@ -18,14 +19,14 @@ impl<T: Merge + Ord + Default + Clone> MerkleTree<T> {
             .map(|i| leaves_count + i - 1)
             .collect::<Vec<_>>();
 
-        indices.sort_by(|a, b| b.cmp(&a));
+        indices.sort_by_key(|i| Reverse(*i));
 
         if indices[0] >= (leaves_count << 1) - 1 {
             return None;
         }
 
         let mut lemmas = Vec::new();
-        let mut queue = indices.iter().cloned().map(|i| i).collect::<VecDeque<_>>();
+        let mut queue: VecDeque<usize> = indices.clone().into();
 
         while let Some(index) = queue.pop_front() {
             let sibling = index.sibling();
@@ -41,7 +42,7 @@ impl<T: Merge + Ord + Default + Clone> MerkleTree<T> {
             }
         }
 
-        indices.sort_by(|a, b| self.nodes[*a].cmp(&self.nodes[*b]));
+        indices.sort_by_key(|i| &self.nodes[*i]);
 
         let indices = indices.into_iter().map(|i| i as u32).collect::<Vec<_>>();
         Some(MerkleProof { indices, lemmas })
@@ -67,21 +68,23 @@ pub struct MerkleProof<T: Merge + Ord + Default + Clone> {
 
 impl<T: Merge + Ord + Default + Clone> MerkleProof<T> {
     pub fn root(&self, leaves: &[T]) -> Option<T> {
-        // TODO: Remove this clone
-        let mut leaves = leaves.to_vec();
         if leaves.len() != self.indices.len() || leaves.is_empty() {
             return None;
         }
+        
+        // TODO: Remove this clone
+        let mut leaves = leaves.to_vec();
         leaves.sort();
+
         let mut pre = self
             .indices
             .iter()
             .zip(leaves.into_iter())
             .map(|(i, l)| (*i, l))
             .collect::<Vec<_>>();
-        pre.sort_by(|a, b| b.0.cmp(&a.0));
+        pre.sort_by_key(|i| Reverse(i.0));
 
-        let mut queue = pre.into_iter().collect::<VecDeque<_>>();
+        let mut queue: VecDeque<(usize, T)> = pre.into();
         let mut lemmas_iter = self.lemmas.iter();
 
         while let Some((index, node)) = queue.pop_front() {
