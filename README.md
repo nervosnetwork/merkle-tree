@@ -55,19 +55,19 @@ Merkle Proof can provide a proof for existence of one or more items. Only siblin
 You can use any type to generate a Merkle Tree, if `Merge`, `Ord` and `Default` is implemented for it. like:
 
 ```
-#[derive(Default, PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
-struct DummyHash(i32);
+use merkle_tree::CBMT;
 
-impl Merge for DummyHash {
-    fn merge(left: &DummyHash, right: &DummyHash) -> Self {
-        DummyHash(right.0.wrapping_sub(left.0))
+impl Merge for i32 {
+    fn merge(left: &Self, right: &Self) -> Self {
+        right.wrapping_sub(*left)
     }
 }
 
-let leaves = vec![DummyHash(1), DummyHash(2), DummyHash(3)];
-let cbmt = new_cbmt::<DummyHash>();
-let root = cbmt.build_merkle_root(&leaves);
-let tree = cbmt.build_merkle_tree(&leaves);
-let proof = cbmt.build_merkle_proof(&leaves, vec![0,2]).unwrap();
-proof.verify(vec![DummyHash(1), DummyHash(3)], &root);
+let leaves = vec![2i32, 3, 5, 7, 11];
+let indices = vec![0, 4];
+let proof_leaves = vec![2i32, 11];
+let root = CBMT::build_merkle_root(&leaves);
+let proof = CBMT::build_merkle_proof(&leaves, &indices).unwrap();
+let tree = CBMT::build_merkle_tree(leaves);
+proof.verify(&proof_leaves, &root);
 ```
