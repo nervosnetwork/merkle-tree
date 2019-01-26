@@ -1,5 +1,8 @@
 # Merkle Tree for Static Data
 
+[![Build status](https://ci.appveyor.com/api/projects/status/smv1jr8mrbf5a8is?svg=true)](https://ci.appveyor.com/project/doitian/merkle-tree)
+[![Build Status](https://travis-ci.com/nervosnetwork/merkle-tree.svg?branch=master)](https://travis-ci.com/nervosnetwork/merkle-tree)
+
 ## Complete Binary Merkle Tree
 
 Complete Binary Merkle Tree(CBMT) can be used to to generate *Merkle Root*  and *Merkle Proof* for a static list of items. Currently, CBMT is used to calculate *Transactions Root*. Basically, CBMT is a ***complete binary tree***, in which every level, except possibly the last, is completely filled, and all nodes are as far left as possible. And it is also a ***full binary tree***, in which every node other than the leaves has two children. Compare with other Merkle trees, the hash computation of CBMT is minimal, as well as the proof size.
