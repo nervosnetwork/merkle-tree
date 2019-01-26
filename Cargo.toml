@@ -1,9 +1,20 @@
 [package]
-name = "merkle-tree"
+name = "merkle-cbt"
 version = "0.1.0-pre"
 license = "MIT"
 authors = ["Nervos Core Dev <dev@nervos.org>"]
-edition = "2018"
+edition = "2019"
+
+description = "A library for generating efficient Merkle tree and combined Merkle proof based on complete binary tree"
+repository = "https://github.com/nervosnetwork/merkle-tree"
+readme = "README.md"
+keywords = ["merkle", "proof"]
+categories = ["algorithms", "data-structures"]
+
+[badges]
+appveyor = { repository = "https://ci.appveyor.com/project/doitian/merkle-tree", branch = "master", service = "github" }
+travis-ci = { repository = "https://travis-ci.com/nervosnetwork/merkle-tree", branch = "master" }
+maintenance = { status = "actively-developed" }
 
 [dependencies]
 serde = "1.0"
