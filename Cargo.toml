@@ -12,8 +12,6 @@ keywords = ["merkle", "proof"]
 categories = ["algorithms", "data-structures"]
 
 [badges]
-appveyor = { repository = "https://ci.appveyor.com/project/doitian/merkle-tree", branch = "master", service = "github" }
-travis-ci = { repository = "https://travis-ci.com/nervosnetwork/merkle-tree", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
