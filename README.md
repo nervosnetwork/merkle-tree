@@ -55,22 +55,21 @@ Merkle Proof can provide a proof for existence of one or more items. Only siblin
 
 ## Usage
 
-You can use any type to generate a Merkle Tree, if `Merge`, `Ord` and `Default` is implemented for it. like:
+You can use any type to generate a Merkle Tree by provide a merge function Fn(&T, &T) -> T + Copy. like:
 
 ```
 use merkle_tree::CBMT;
 
-impl Merge for i32 {
-    fn merge(left: &Self, right: &Self) -> Self {
-        right.wrapping_sub(*left)
-    }
+fn merge(left: &i32, right: &i32) -> i32 {
+    right.wrapping_sub(*left)
 }
 
 let leaves = vec![2i32, 3, 5, 7, 11];
 let indices = vec![0, 4];
 let proof_leaves = vec![2i32, 11];
-let root = CBMT::build_merkle_root(&leaves);
-let proof = CBMT::build_merkle_proof(&leaves, &indices).unwrap();
-let tree = CBMT::build_merkle_tree(leaves);
+let cbmt = CBMT::new(merge);
+let root = cbmt.build_merkle_root(&leaves);
+let proof = cbmt.build_merkle_proof(&leaves, &indices).unwrap();
+let tree = cbmt.build_merkle_tree(leaves);
 proof.verify(&proof_leaves, &root);
 ```
