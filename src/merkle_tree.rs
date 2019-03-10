@@ -9,7 +9,7 @@ pub trait Merge {
 
 pub struct MerkleTree<T, M> {
     nodes: Vec<T>,
-    phantom: PhantomData<M>,
+    merge: PhantomData<M>,
 }
 
 impl<T, M> MerkleTree<T, M>
@@ -57,7 +57,7 @@ where
         Some(MerkleProof {
             indices,
             lemmas,
-            phantom: PhantomData,
+            merge: PhantomData,
         })
     }
 
@@ -77,7 +77,7 @@ where
 pub struct MerkleProof<T, M> {
     indices: Vec<u32>,
     lemmas: Vec<T>,
-    phantom: PhantomData<M>,
+    merge: PhantomData<M>,
 }
 
 impl<T, M> MerkleProof<T, M>
@@ -195,12 +195,12 @@ where
 
             MerkleTree {
                 nodes,
-                phantom: PhantomData,
+                merge: PhantomData,
             }
         } else {
             MerkleTree {
                 nodes: vec![],
-                phantom: PhantomData,
+                merge: PhantomData,
             }
         }
     }
