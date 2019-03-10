@@ -2,15 +2,20 @@ use std::cmp::Reverse;
 use std::collections::VecDeque;
 use std::marker::PhantomData;
 
+pub trait Merge {
+    type Item;
+    fn merge(left: &Self::Item, right: &Self::Item) -> Self::Item;
+}
+
 pub struct MerkleTree<T, M> {
     nodes: Vec<T>,
-    merge: M,
+    phantom: PhantomData<M>,
 }
 
 impl<T, M> MerkleTree<T, M>
 where
     T: Ord + Default + Clone,
-    M: Fn(&T, &T) -> T + Copy,
+    M: Merge<Item = T>,
 {
     pub fn build_proof(&self, indices: &[usize]) -> Option<MerkleProof<T, M>> {
         if self.nodes.is_empty() || indices.is_empty() {
@@ -52,7 +57,7 @@ where
         Some(MerkleProof {
             indices,
             lemmas,
-            merge: self.merge,
+            phantom: PhantomData,
         })
     }
 
@@ -72,13 +77,13 @@ where
 pub struct MerkleProof<T, M> {
     indices: Vec<u32>,
     lemmas: Vec<T>,
-    merge: M,
+    phantom: PhantomData<M>,
 }
 
 impl<T, M> MerkleProof<T, M>
 where
     T: Ord + Default + Clone,
-    M: Fn(&T, &T) -> T + Copy,
+    M: Merge<Item = T>,
 {
     pub fn root(&self, leaves: &[T]) -> Option<T> {
         if leaves.len() != self.indices.len() || leaves.is_empty() {
@@ -115,9 +120,9 @@ where
                 _ => lemmas_iter.next().cloned(),
             } {
                 let parent_node = if index.is_left() {
-                    (self.merge)(&node, &sibling)
+                    M::merge(&node, &sibling)
                 } else {
-                    (self.merge)(&sibling, &node)
+                    M::merge(&sibling, &node)
                 };
 
                 queue.push_back((index.parent(), parent_node));
@@ -145,23 +150,16 @@ where
 
 #[derive(Default)]
 pub struct CBMT<T, M> {
-    phantom: PhantomData<T>,
-    merge: M,
+    data_type: PhantomData<T>,
+    merge: PhantomData<M>,
 }
 
 impl<T, M> CBMT<T, M>
 where
     T: Ord + Default + Clone,
-    M: Fn(&T, &T) -> T + Copy,
+    M: Merge<Item = T>,
 {
-    pub fn new(merge: M) -> Self {
-        CBMT {
-            phantom: PhantomData,
-            merge,
-        }
-    }
-
-    pub fn build_merkle_root(&self, leaves: &[T]) -> T {
+    pub fn build_merkle_root(leaves: &[T]) -> T {
         if leaves.is_empty() {
             return T::default();
         }
@@ -170,7 +168,7 @@ where
 
         let mut iter = leaves.rchunks_exact(2);
         while let Some([leaf1, leaf2]) = iter.next() {
-            queue.push_back((self.merge)(leaf1, leaf2))
+            queue.push_back(M::merge(leaf1, leaf2))
         }
         if let [leaf] = iter.remainder() {
             queue.push_front(leaf.clone())
@@ -179,13 +177,13 @@ where
         while queue.len() > 1 {
             let right = queue.pop_front().unwrap();
             let left = queue.pop_front().unwrap();
-            queue.push_back((self.merge)(&left, &right));
+            queue.push_back(M::merge(&left, &right));
         }
 
         queue.pop_front().unwrap()
     }
 
-    pub fn build_merkle_tree(&self, leaves: Vec<T>) -> MerkleTree<T, M> {
+    pub fn build_merkle_tree(leaves: Vec<T>) -> MerkleTree<T, M> {
         let len = leaves.len();
         if len > 0 {
             let mut nodes = vec![T::default(); len - 1];
@@ -193,23 +191,23 @@ where
 
             (0..len - 1)
                 .rev()
-                .for_each(|i| nodes[i] = (self.merge)(&nodes[(i << 1) + 1], &nodes[(i << 1) + 2]));
+                .for_each(|i| nodes[i] = M::merge(&nodes[(i << 1) + 1], &nodes[(i << 1) + 2]));
 
             MerkleTree {
                 nodes,
-                merge: self.merge,
+                phantom: PhantomData,
             }
         } else {
             MerkleTree {
                 nodes: vec![],
-                merge: self.merge,
+                phantom: PhantomData,
             }
         }
     }
 
-    pub fn build_merkle_proof(&self, leaves: &[T], indices: &[usize]) -> Option<MerkleProof<T, M>> {
+    pub fn build_merkle_proof(leaves: &[T], indices: &[usize]) -> Option<MerkleProof<T, M>> {
         // TODO: Remove this clone
-        self.build_merkle_tree(leaves.to_vec()).build_proof(indices)
+        Self::build_merkle_tree(leaves.to_vec()).build_proof(indices)
     }
 }
 
@@ -257,15 +255,21 @@ mod tests {
     use proptest::sample::subsequence;
     use proptest::{proptest, proptest_helper};
 
-    fn merge(left: &i32, right: &i32) -> i32 {
-        right.wrapping_sub(*left)
+    struct MergeI32 {}
+
+    impl Merge for MergeI32 {
+        type Item = i32;
+        fn merge(left: &Self::Item, right: &Self::Item) -> Self::Item {
+            right.wrapping_sub(*left)
+        }
     }
+
+    type CBMTI32 = CBMT<i32, MergeI32>;
 
     #[test]
     fn build_empty() {
         let leaves = vec![];
-        let cbmt = CBMT::new(merge);
-        let tree = cbmt.build_merkle_tree(leaves);
+        let tree = CBMTI32::build_merkle_tree(leaves);
         assert!(tree.nodes().is_empty());
         assert_eq!(tree.root(), i32::default());
     }
@@ -273,38 +277,33 @@ mod tests {
     #[test]
     fn build_one() {
         let leaves = vec![1i32];
-        let cbmt = CBMT::new(merge);
-        let tree = cbmt.build_merkle_tree(leaves);
+        let tree = CBMTI32::build_merkle_tree(leaves);
         assert_eq!(&vec![1], tree.nodes());
     }
 
     #[test]
     fn build_two() {
         let leaves = vec![1i32, 2];
-        let cbmt = CBMT::new(merge);
-        let tree = cbmt.build_merkle_tree(leaves);
+        let tree = CBMTI32::build_merkle_tree(leaves);
         assert_eq!(&vec![1, 1, 2], tree.nodes());
     }
 
     #[test]
     fn build_five() {
         let leaves = vec![2i32, 3, 5, 7, 11];
-        let cbmt = CBMT::new(merge);
-        let tree = cbmt.build_merkle_tree(leaves);
+        let tree = CBMTI32::build_merkle_tree(leaves);
         assert_eq!(&vec![4, -2, 2, 4, 2, 3, 5, 7, 11], tree.nodes());
     }
 
     #[test]
     fn build_root_directly() {
         let leaves = vec![2i32, 3, 5, 7, 11];
-        let cbmt = CBMT::new(merge);
-        assert_eq!(4, cbmt.build_merkle_root(&leaves));
+        assert_eq!(4, CBMTI32::build_merkle_root(&leaves));
     }
 
     fn _build_root_is_same_as_tree_root(leaves: Vec<i32>) {
-        let cbmt = CBMT::new(merge);
-        let root = cbmt.build_merkle_root(&leaves);
-        let tree = cbmt.build_merkle_tree(leaves);
+        let root = CBMTI32::build_merkle_root(&leaves);
+        let tree = CBMTI32::build_merkle_tree(leaves);
         assert_eq!(root, tree.root());
     }
 
@@ -323,8 +322,7 @@ mod tests {
             .iter()
             .map(|i| leaves[*i].clone())
             .collect::<Vec<_>>();
-        let cbmt = CBMT::new(merge);
-        let proof = cbmt.build_merkle_proof(&leaves, &indices).unwrap();
+        let proof = CBMTI32::build_merkle_proof(&leaves, &indices).unwrap();
 
         assert_eq!(vec![11, 3, 2], proof.lemmas);
         assert_eq!(Some(1), proof.root(&proof_leaves));
@@ -336,9 +334,8 @@ mod tests {
             .map(|i| leaves[*i].clone())
             .collect::<Vec<_>>();
 
-        let cbmt = CBMT::new(merge);
-        let proof = cbmt.build_merkle_proof(&leaves, &indices).unwrap();
-        let root = cbmt.build_merkle_root(&leaves);
+        let proof = CBMTI32::build_merkle_proof(&leaves, &indices).unwrap();
+        let root = CBMTI32::build_merkle_root(&leaves);
         assert_eq!(root, proof.root(&proof_leaves).unwrap());
     }
 
