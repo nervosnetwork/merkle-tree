@@ -1,6 +1,6 @@
-use std::cmp::Reverse;
-use std::collections::VecDeque;
-use std::marker::PhantomData;
+use crate::{collections::VecDeque, vec, vec::Vec};
+use core::cmp::Reverse;
+use core::marker::PhantomData;
 
 pub trait Merge {
     type Item;
