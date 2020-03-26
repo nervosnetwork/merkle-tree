@@ -87,6 +87,14 @@ where
     T: Ord + Default + Clone,
     M: Merge<Item = T>,
 {
+    pub fn new(indices: Vec<u32>, lemmas: Vec<T>) -> Self {
+        Self {
+            indices,
+            lemmas,
+            merge: PhantomData,
+        }
+    }
+
     pub fn root(&self, leaves: &[T]) -> Option<T> {
         if leaves.len() != self.indices.len() || leaves.is_empty() {
             return None;
