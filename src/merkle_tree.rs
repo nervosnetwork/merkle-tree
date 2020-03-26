@@ -275,6 +275,7 @@ mod tests {
     }
 
     type CBMTI32 = CBMT<i32, MergeI32>;
+    type CBMTI32Proof = MerkleProof<i32, MergeI32>;
 
     #[test]
     fn build_empty() {
@@ -309,6 +310,27 @@ mod tests {
     fn build_root_directly() {
         let leaves = vec![2i32, 3, 5, 7, 11];
         assert_eq!(4, CBMTI32::build_merkle_root(&leaves));
+    }
+
+    #[test]
+    fn rebuild_proof() {
+        let leaves = vec![2i32, 3, 5, 7, 11];
+        let tree = CBMTI32::build_merkle_tree(leaves);
+        let root = tree.root();
+
+        // build proof
+        let proof = tree.build_proof(&[0, 3]).unwrap();
+        let lemmas = proof.lemmas();
+        let indices = proof.indices();
+
+        // rebuild proof
+        let needed_leaves: Vec<i32> = indices
+            .iter()
+            .map(|i| tree.nodes()[*i as usize].clone())
+            .collect();
+        let rebuild_proof = CBMTI32Proof::new(indices.to_vec(), lemmas.to_vec());
+        assert_eq!(rebuild_proof.verify(&root, &needed_leaves), true);
+        assert_eq!(root, rebuild_proof.root(&needed_leaves).unwrap());
     }
 
     fn _build_root_is_same_as_tree_root(leaves: Vec<i32>) {
