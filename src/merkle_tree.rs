@@ -17,13 +17,14 @@ where
     T: Ord + Default + Clone,
     M: Merge<Item = T>,
 {
-    pub fn build_proof(&self, indices: &[u32]) -> Option<MerkleProof<T, M>> {
-        if self.nodes.is_empty() || indices.is_empty() {
+    /// `leaf_indices`: The indices of leaves
+    pub fn build_proof(&self, leaf_indices: &[u32]) -> Option<MerkleProof<T, M>> {
+        if self.nodes.is_empty() || leaf_indices.is_empty() {
             return None;
         }
 
         let leaves_count = ((self.nodes.len() >> 1) + 1) as u32;
-        let mut indices = indices
+        let mut indices = leaf_indices
             .iter()
             .map(|i| leaves_count + i - 1)
             .collect::<Vec<_>>();
@@ -207,9 +208,9 @@ where
         }
     }
 
-    pub fn build_merkle_proof(leaves: &[T], indices: &[u32]) -> Option<MerkleProof<T, M>> {
+    pub fn build_merkle_proof(leaves: &[T], leaf_indices: &[u32]) -> Option<MerkleProof<T, M>> {
         // TODO: Remove this clone
-        Self::build_merkle_tree(leaves.to_vec()).build_proof(indices)
+        Self::build_merkle_tree(leaves.to_vec()).build_proof(leaf_indices)
     }
 }
 
@@ -319,35 +320,35 @@ mod tests {
     #[test]
     fn build_proof() {
         let leaves = vec![2i32, 3, 5, 7, 11, 13];
-        let indices = vec![0u32, 5u32];
-        let proof_leaves = indices
+        let leaf_indices = vec![0u32, 5u32];
+        let proof_leaves = leaf_indices
             .iter()
             .map(|i| leaves[*i as usize].clone())
             .collect::<Vec<_>>();
-        let proof = CBMTI32::build_merkle_proof(&leaves, &indices).unwrap();
+        let proof = CBMTI32::build_merkle_proof(&leaves, &leaf_indices).unwrap();
 
         assert_eq!(vec![11, 3, 2], proof.lemmas);
         assert_eq!(Some(1), proof.root(&proof_leaves));
 
         // merkle proof for single leaf
         let leaves = vec![2i32];
-        let indices = vec![0u32];
-        let proof_leaves = indices
+        let leaf_indices = vec![0u32];
+        let proof_leaves = leaf_indices
             .iter()
             .map(|i| leaves[*i as usize].clone())
             .collect::<Vec<_>>();
-        let proof = CBMTI32::build_merkle_proof(&leaves, &indices).unwrap();
+        let proof = CBMTI32::build_merkle_proof(&leaves, &leaf_indices).unwrap();
         assert!(proof.lemmas.is_empty());
         assert_eq!(Some(2), proof.root(&proof_leaves));
     }
 
-    fn _tree_root_is_same_as_proof_root(leaves: Vec<i32>, indices: Vec<u32>) {
-        let proof_leaves = indices
+    fn _tree_root_is_same_as_proof_root(leaves: Vec<i32>, leaf_indices: Vec<u32>) {
+        let proof_leaves = leaf_indices
             .iter()
             .map(|i| leaves[*i as usize].clone())
             .collect::<Vec<_>>();
 
-        let proof = CBMTI32::build_merkle_proof(&leaves, &indices).unwrap();
+        let proof = CBMTI32::build_merkle_proof(&leaves, &leaf_indices).unwrap();
         let root = CBMTI32::build_merkle_root(&leaves);
         assert_eq!(root, proof.root(&proof_leaves).unwrap());
     }
