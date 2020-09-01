@@ -72,7 +72,7 @@ where
         }
     }
 
-    pub fn nodes(&self) -> &Vec<T> {
+    pub fn nodes(&self) -> &[T] {
         &self.nodes
     }
 }
@@ -101,7 +101,6 @@ where
             return None;
         }
 
-        // TODO: Remove this clone
         let mut leaves = leaves.to_vec();
         leaves.sort();
 
@@ -194,11 +193,11 @@ where
         queue.pop_front().unwrap()
     }
 
-    pub fn build_merkle_tree(leaves: Vec<T>) -> MerkleTree<T, M> {
+    pub fn build_merkle_tree(leaves: &[T]) -> MerkleTree<T, M> {
         let len = leaves.len();
         if len > 0 {
             let mut nodes = vec![T::default(); len - 1];
-            nodes.extend(leaves);
+            nodes.extend_from_slice(leaves);
 
             (0..len - 1)
                 .rev()
@@ -217,8 +216,32 @@ where
     }
 
     pub fn build_merkle_proof(leaves: &[T], leaf_indices: &[u32]) -> Option<MerkleProof<T, M>> {
-        // TODO: Remove this clone
-        Self::build_merkle_tree(leaves.to_vec()).build_proof(leaf_indices)
+        Self::build_merkle_tree(leaves).build_proof(leaf_indices)
+    }
+
+    /// retrieve that a proof points to leaves of a tree, returning `None` if the proof indices is empty or out of bounds
+    pub fn retrieve_leaves(leaves: &[T], proof: &MerkleProof<T, M>) -> Option<Vec<T>> {
+        if leaves.is_empty() || proof.indices().is_empty() {
+            return None;
+        }
+
+        let leaves_count = leaves.len() as u32;
+        let valid_indices_range = leaves_count - 1..(leaves_count << 1) - 1;
+        if proof
+            .indices()
+            .iter()
+            .all(|index| valid_indices_range.contains(index))
+        {
+            Some(
+                proof
+                    .indices()
+                    .iter()
+                    .map(|index| leaves[(index + 1 - leaves_count) as usize].clone())
+                    .collect(),
+            )
+        } else {
+            None
+        }
     }
 }
 
@@ -281,7 +304,7 @@ mod tests {
     #[test]
     fn build_empty() {
         let leaves = vec![];
-        let tree = CBMTI32::build_merkle_tree(leaves);
+        let tree = CBMTI32::build_merkle_tree(&leaves);
         assert!(tree.nodes().is_empty());
         assert_eq!(tree.root(), i32::default());
     }
@@ -289,22 +312,22 @@ mod tests {
     #[test]
     fn build_one() {
         let leaves = vec![1i32];
-        let tree = CBMTI32::build_merkle_tree(leaves);
-        assert_eq!(&vec![1], tree.nodes());
+        let tree = CBMTI32::build_merkle_tree(&leaves);
+        assert_eq!(vec![1], tree.nodes());
     }
 
     #[test]
     fn build_two() {
         let leaves = vec![1i32, 2];
-        let tree = CBMTI32::build_merkle_tree(leaves);
-        assert_eq!(&vec![1, 1, 2], tree.nodes());
+        let tree = CBMTI32::build_merkle_tree(&leaves);
+        assert_eq!(vec![1, 1, 2], tree.nodes());
     }
 
     #[test]
     fn build_five() {
         let leaves = vec![2i32, 3, 5, 7, 11];
-        let tree = CBMTI32::build_merkle_tree(leaves);
-        assert_eq!(&vec![4, -2, 2, 4, 2, 3, 5, 7, 11], tree.nodes());
+        let tree = CBMTI32::build_merkle_tree(&leaves);
+        assert_eq!(vec![4, -2, 2, 4, 2, 3, 5, 7, 11], tree.nodes());
     }
 
     #[test]
@@ -316,7 +339,7 @@ mod tests {
     #[test]
     fn rebuild_proof() {
         let leaves = vec![2i32, 3, 5, 7, 11];
-        let tree = CBMTI32::build_merkle_tree(leaves);
+        let tree = CBMTI32::build_merkle_tree(&leaves);
         let root = tree.root();
 
         // build proof
@@ -336,7 +359,7 @@ mod tests {
 
     fn _build_root_is_same_as_tree_root(leaves: Vec<i32>) {
         let root = CBMTI32::build_merkle_root(&leaves);
-        let tree = CBMTI32::build_merkle_tree(leaves);
+        let tree = CBMTI32::build_merkle_tree(&leaves);
         assert_eq!(root, tree.root());
     }
 
@@ -390,5 +413,27 @@ mod tests {
         ) {
             _tree_root_is_same_as_proof_root(input.0, input.1);
         }
+    }
+
+    #[test]
+    fn verify_retrieve_leaves() {
+        let leaves = vec![2i32, 3, 5, 7, 11, 13];
+        let leaf_indices = vec![0u32, 3];
+        let mut proof = CBMTI32::build_merkle_proof(&leaves, &leaf_indices).unwrap();
+        let retrieved_leaves = CBMTI32::retrieve_leaves(&leaves, &proof);
+        assert_eq!(Some(vec![2, 7]), retrieved_leaves);
+        assert_eq!(
+            proof.root(&retrieved_leaves.unwrap()).unwrap(),
+            CBMTI32::build_merkle_root(&leaves)
+        );
+
+        proof.indices = vec![];
+        assert_eq!(None, CBMTI32::retrieve_leaves(&leaves, &proof));
+
+        proof.indices = vec![4];
+        assert_eq!(None, CBMTI32::retrieve_leaves(&leaves, &proof));
+
+        proof.indices = vec![11];
+        assert_eq!(None, CBMTI32::retrieve_leaves(&leaves, &proof));
     }
 }
