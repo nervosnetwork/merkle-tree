@@ -286,8 +286,8 @@ mod tests {
     use proptest::collection::vec;
     use proptest::num::i32;
     use proptest::prelude::*;
+    use proptest::proptest;
     use proptest::sample::subsequence;
-    use proptest::{proptest, proptest_helper};
 
     struct MergeI32 {}
 

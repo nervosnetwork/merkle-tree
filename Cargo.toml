@@ -1,6 +1,6 @@
 [package]
 name = "merkle-cbt"
-version = "0.3.0"
+version = "0.3.1"
 license = "MIT"
 authors = ["Nervos Core Dev <dev@nervos.org>"]
 edition = "2018"
@@ -15,10 +15,10 @@ categories = ["algorithms", "data-structures"]
 maintenance = { status = "actively-developed" }
 
 [dev-dependencies]
-proptest = "0.8"
+proptest = "1"
 
 [dependencies]
-cfg-if = "0.1"
+cfg-if = "1"
 
 [features]
 default = ["std"]

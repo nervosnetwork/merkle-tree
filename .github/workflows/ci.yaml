@@ -1,0 +1,56 @@
+name: Github Action
+
+on:
+  pull_request:  # trigger on pull requests
+  push:
+    branches:
+      - master    # trigger on push to master
+
+jobs:
+  Build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [ linux, macos, windows ]
+        include:
+          - build: linux
+            os: ubuntu-latest
+            rust: stable
+          - build: macos
+            os: macos-latest
+            rust: stable
+          - build: windows
+            os: windows-latest
+            rust: stable
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run tests
+        run: make test
+
+  no_std:
+    name: No_std
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: No_std check
+        run: make ensure_no_std
+
+  rustfmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Format check
+        run: |
+          rustup component add rustfmt
+          cargo fmt --all -- --check
+  
+  clippy_check:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Clippy check
+        run: |
+          rustup component add clippy
+          cargo clippy
